@@ -1,0 +1,30 @@
+name: Deploy FastAPI App
+
+on:
+  push:
+    branches:
+       - main
+  workflow_dispatch:
+
+jobs:
+ deploy:
+   runs-on: ubuntu_latest
+
+   steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        
+      - name: Configure AWS CLI
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ secrets.AWS_REGION }}
+
+      - name: Deploy FastAPI App
+        run: |
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=instanceIds,Values=${{ secrets.INSTANCE_ID }}" \
+            --parameters commands="cd /home/ec2-user/fastapi-book-project && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && sudo systemctl restart fastapi && sudo systemctl restart nginx" \
+            --comment "Deploy FastAPI App" \
+            --output text
